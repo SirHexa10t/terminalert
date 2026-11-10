@@ -1,0 +1,54 @@
+# terminalert reminders file — the format reference; every field appears once, at its default.
+
+#### SYNTAX ####
+# * One file per topic, named for it: `bills.toml` reminds as "bills"
+# * Settings on top, each optional; then `pending`: your reminders
+# * The table sits between ''' marks, its text taken as typed; one reminder per line
+# * Columns are split by 2 or more spaces (or a tab); a single space stays inside a column:
+#   "2026-11-20 10:30" is one timing, "Pay invoice #1234" one reminder
+# * `#` starts a comment: a whole line, or a column of its own — the reminder's note ("Dentist  # bring the X-rays")
+
+
+#### FIELDS ####
+
+recurring = false   # (default) optional: true = reminders repeat, each by its timing (birthdays, bills)
+                    #   false = a to-do list: a reminder marked done is put away
+notice = "1 day"    # (default) optional: how long ahead of its date a reminder starts reminding
+                    #   e.g. "3 days", "2 weeks", "12 hours"
+sticky = false      # (default) optional: true = a reminder keeps reminding after its date, until you mark it (bills, deadlines)
+                    #   false = it stops once its date has passed (birthdays, appointments)
+urgency = 3         # (default) optional: reminders are ordered by it
+                    #   1 = whenever, 2 = can-wait, 3 = soon, 4 = pressing, 5 = ASAP
+
+
+#### PENDING ####
+
+#   Timing     when the reminder is due (below)
+#   Reminder   what to remind of — each one once per file
+#   # note     (optional) anything more — a second deadline, a word to yourself; shown with the reminder
+
+# Timings — MONTH BEFORE DAY:
+#   2026-11-20          once, on November 20th, 2026 (in a recurring file: every November 20th, since 2026)
+#   04-12               every April 12th
+#   daily               every day
+#   mon                 every Monday
+#   mon,thu             every Monday and Thursday
+#   last                every month's last day
+#   -                   none: a chore, pending until done
+# * A time may follow, after one space, 24-hour: "2026-11-20 10:30", "mon 18:00"
+# * Anything else is cron's — minute hour day-of-month month weekday, as a crontab line starts:
+#   * * 1 * *           the 1st of every month (`*`: every; `* *` for the time: all day)
+#   30 9 1 * *          the 1st of every month, at 09:30
+#   * * 9 */2 *         the 9th of every 2nd month, from January: Jan, Mar, May...
+#   * * 9 2-12/2 *      the 9th of every 2nd month, from February: Feb, Apr, Jun...
+#   * * 15 1,4,7,10 *   the 15th of January, April, July and October
+#   * * * * mon-fri     every weekday
+#   (a day-of-month AND a weekday: a day matching EITHER one — cron's own rule)
+# * Recurring files take repeating timings; to-do files take full dates, or `-`
+
+pending = '''
+# Timing          Reminder
+2026-11-20 10:30  Dentist                    # bring the X-rays
+2026-12-02        Dana's school play
+-                 Fix the squeaky door
+'''

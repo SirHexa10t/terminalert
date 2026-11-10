@@ -1,0 +1,8 @@
+# Appointments: a to-do list of dates, each reminding a day ahead until its day has passed.
+# The defaults do exactly that, so there are no settings to write.
+
+pending = '''
+# Timing          Reminder
+2026-11-20 10:30  Dentist                   # bring the X-rays
+2026-12-04 17:00  Parent-teacher meeting
+'''

@@ -1,0 +1,15 @@
+# Bills: each comes back every period, reminding 5 days ahead.
+
+recurring = true
+notice = "5 days"
+sticky = true    # keeps reminding past the due date until marked paid — an unpaid bill mustn't go quiet
+urgency = 4      # pressing
+
+pending = '''
+# Timing          Reminder
+* * 1 * *         Rent
+last              Electricity    # 5% off if paid by the 25th
+# the 9th of every 2nd month, from February: Feb, Apr, Jun...
+* * 9 2-12/2 *    Water
+03-01             Car tax
+'''

@@ -1,0 +1,11 @@
+# Deadlines: two weeks ahead, and still reminding past the date until done.
+
+notice = "2 weeks"
+sticky = true
+urgency = 5   # ASAP
+
+pending = '''
+# Timing    Reminder
+2026-12-02  Renew the car insurance
+2027-01-31  File the tax return        # the accountant needs a week
+'''

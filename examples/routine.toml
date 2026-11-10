@@ -1,0 +1,11 @@
+# A weekly routine: a weekday's first three letters, several joined by commas, and a time after one space.
+
+recurring = true
+
+pending = '''
+# Timing          Reminder
+mon               Take out the trash
+mon,thu 18:00     Piano lesson
+# what the short forms can't say, as cron says it: every weekday
+* * * * mon-fri   Pack the lunchboxes
+'''

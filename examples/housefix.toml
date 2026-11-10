@@ -1,0 +1,9 @@
+# Chores: no timing — write "-" in its place. Each stays pending until you mark it done.
+
+urgency = 1   # whenever
+
+pending = '''
+# Timing    Reminder
+-           Fix the squeaky door
+-           Replace the bathroom bulb    # the tall ladder is in the shed
+'''
