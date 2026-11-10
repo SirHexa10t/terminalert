@@ -110,6 +110,10 @@ pub struct Alert<'a> {
     pub topic: &'a Topic,
     pub reminder: &'a Reminder,
     pub state: State,
+    /// In a yearly cycle ([`Topic::is_yearly_cycle`]), for a reminder written with its year: the
+    /// years its date reaches — counted up to the date alerted of, so that a 30th anniversary says
+    /// so ahead of the day.
+    pub years: Option<i16>,
 }
 
 /// A topic's counted reminders: its sticky reminders with something to say, and its chores.
@@ -148,10 +152,12 @@ pub fn due<'a>(shelf: &'a [(Topic, Record)], now: &Zoned) -> Due<'a> {
     order.sort_by(|(a, _), (b, _)| by_urgency(a, b));
     let mut due = Due::default();
     for (topic, record) in order {
+        let yearly = topic.is_yearly_cycle(now.date());
         let mut counted = Vec::new();
         for reminder in &topic.reminders {
             let state = state(reminder, &topic.settings, record.round(&reminder.what), now);
-            let alert = Alert { topic, reminder, state };
+            let years = if yearly { years_at(reminder, &state) } else { None };
+            let alert = Alert { topic, reminder, state, years };
             match alert.state {
                 State::Quiet => {}
                 State::Pending | State::Overdue(_) => counted.push(alert),
@@ -164,6 +170,15 @@ pub fn due<'a>(shelf: &'a [(Topic, Record)], now: &Zoned) -> Due<'a> {
         }
     }
     due
+}
+
+/// The years `reminder`'s date reaches at the date `state` alerts of, from the date its year was
+/// written with — none below one, and none for a reminder written without its year.
+fn years_at(reminder: &Reminder, state: &State) -> Option<i16> {
+    let since = reminder.timing.since()?;
+    let (State::Upcoming(at) | State::Today(at)) = state else { return None };
+    let years = at.start.date().year() - since.year();
+    (years >= 1).then_some(years)
 }
 
 /// The topics' order: by urgency, then by name.
@@ -303,6 +318,43 @@ mod tests {
         assert_eq!(
             round_to_mark(reminder, settings, Some(&ahead), &now).unwrap().key(),
             "2027-01-01"
+        );
+    }
+
+    /// A yearly cycle's alerts count the years their dates reach, up to the date alerted of — a
+    /// birthday ahead says the age it brings — and a reminder written without its year counts none.
+    /// A file that isn't a yearly cycle counts no years at all.
+    #[test]
+    fn a_yearly_cycle_counts_the_years_up_to_its_date() {
+        let shelf = |text: &str| {
+            let topic = topic("birthday", text);
+            let record = Record::of(&topic.path);
+            [(topic, record)]
+        };
+        let rows = "pending = '''\n1990-11-15  Dana\n1955-11-10  Grandpa\n11-15  Noa\n2025-11-12  Baby\n'''\n";
+        let now = at("2026-11-10T09:00");
+        let years = |shelf: &[(Topic, Record)]| -> Vec<(String, Option<i16>)> {
+            due(shelf, &now)
+                .listed
+                .iter()
+                .map(|alert| (alert.reminder.what.clone(), alert.years))
+                .collect()
+        };
+        let birthdays = shelf(&format!("recurring = true\nnotice = \"1 week\"\n{rows}"));
+        assert_eq!(
+            years(&birthdays),
+            [
+                ("Dana".into(), Some(36)),
+                ("Grandpa".into(), Some(71)),
+                ("Noa".into(), None),
+                ("Baby".into(), Some(1))
+            ]
+        );
+        let ahead = "recurring = true\nnotice = \"1 week\"\npending = '''\n1990-11-15  Dana\n2027-06-01  Wedding\n'''\n";
+        let ahead = shelf(ahead);
+        assert!(
+            years(&ahead).iter().all(|(_, years)| years.is_none()),
+            "a date written ahead: not a yearly cycle"
         );
     }
 

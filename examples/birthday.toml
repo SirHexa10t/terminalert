@@ -1,4 +1,5 @@
-# Birthdays: every year, a week ahead. MONTH BEFORE DAY: April 12th is 04-12, or 1990-04-12 with the year.
+# Birthdays: every year, a week ahead. MONTH BEFORE DAY: April 12th is 04-12 —
+# or 1990-04-12 with the year, and the alert counts the years: "Dana (36 years)".
 
 recurring = true
 notice = "1 week"

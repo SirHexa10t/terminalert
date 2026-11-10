@@ -115,6 +115,13 @@ before: subject, Task, Deadline — the `.done` files still read entries written
     spelled out — "the 9th of February, April, June…" — so the user can make sure it says what
     they meant. An idea with it: it is also where a timing that can't be read gets reported, as
     sequencer's `profile-check` reports a profile's problems.
+17. **The years since a date** (decided 2026-11-10): in a yearly cycle — memorials, birthdays,
+    national holidays, anniversaries: `recurring = true` and `sticky = false`, every timing one
+    day of the year (`04-12`, `1990-04-12`, or cron naming one day a year), and no date written
+    ahead of today — a reminder written with its year has its alerts count the years:
+    `Upcoming in 5 days: birthday:Dana (36 years)`, and "(1 year)" for one. Counted up to its date,
+    so a 30th wedding anniversary says "(30 years)" ahead of the day. A reminder without its year
+    counts none; a file with a date still to come counts none at all.
 
 ## The cost at shell start
 
@@ -238,7 +245,8 @@ Proposed with the plan and not objected to, these are in the code:
    the warning, and the `remind*` commands handing terminalert the store as its folder.
 6. **Done — the words** (2026-11-10): topic, Reminder, Timing, through the code, its messages and
    names, the template and the examples.
-7. **Next, with the developer**: the alerts' look and the keys.
+7. **Done — the years since a date** (2026-11-10): requirement 17.
+8. **Next, with the developer**: the alerts' look and the keys.
 
 ### Where to change what
 
@@ -293,11 +301,6 @@ Every name is a working name, each in one place:
 
 ## Later
 
-- **The years since a date**: in a recurring file whose timings are all a day of the year
-  (`04-12`, `1990-04-12`, or cron naming one day a year), a full date's alert adds how many years
-  have passed: "(36 years)" — only for a date already past; a date still to come gets no count
-  (developer's call, 2026-11-06). Open with it: a birthday reminded a week ahead counts the years
-  at its date (the age Dana turns), or at the moment it's printed?
 - **Every other week** — cron can't say it; a short form for it, if wanted.
 - **Importing `.ics` exports** from calendar apps.
 - **Editing reminders through forms** — bashrs's backlog: "Calendaric notifications and notes

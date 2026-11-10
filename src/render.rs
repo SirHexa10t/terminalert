@@ -54,7 +54,7 @@ pub fn alerts(due: &Due, now: &Zoned, colors: Colors) -> String {
             let when = colors.state(&one.state, &sentence_when(&one.state, now));
             let note =
                 one.reminder.note.as_ref().map(|note| format!(" — {note}")).unwrap_or_default();
-            writeln!(out, "{when}: {}:{}{note}", one.topic.name, one.reminder.what).unwrap();
+            writeln!(out, "{when}: {}:{}{note}", one.topic.name, what(one)).unwrap();
         }
         many => {
             let has_notes = many.iter().any(|alert| alert.reminder.note.is_some());
@@ -108,11 +108,7 @@ impl Row {
     }
 
     fn of(alert: &Alert, now: &Zoned, has_notes: bool) -> Row {
-        let mut cells = vec![
-            table_when(&alert.state, now),
-            alert.topic.name.clone(),
-            alert.reminder.what.clone(),
-        ];
+        let mut cells = vec![table_when(&alert.state, now), alert.topic.name.clone(), what(alert)];
         if has_notes {
             cells.push(alert.reminder.note.clone().unwrap_or_default());
         }
@@ -148,6 +144,16 @@ fn table(rows: &[Row], colors: Colors) -> String {
         writeln!(out, "{}", cells.join("  ").trim_end()).unwrap();
     }
     out
+}
+
+/// What an alert reminds of: the reminder, and the years its date reaches, where it counts them —
+/// "Dana (36 years)".
+fn what(alert: &Alert) -> String {
+    match alert.years {
+        Some(1) => format!("{} (1 year)", alert.reminder.what),
+        Some(years) => format!("{} ({years} years)", alert.reminder.what),
+        None => alert.reminder.what.clone(),
+    }
 }
 
 /// A listed reminder's time, as a sentence opens with it: "Upcoming in 3 days", "Due today".
@@ -200,10 +206,7 @@ pub fn counted_in_full(due: &Due, now: &Zoned, colors: Colors) -> String {
             .alerts
             .iter()
             .map(|alert| {
-                let mut cells = vec![
-                    format!("  {}", table_when(&alert.state, now)),
-                    alert.reminder.what.clone(),
-                ];
+                let mut cells = vec![format!("  {}", table_when(&alert.state, now)), what(alert)];
                 if has_notes {
                     cells.push(
                         alert
@@ -549,6 +552,29 @@ mod tests {
             alerts(&due::due(&[], &now), &now, Colors::Plain),
             "",
             "nothing due: nothing said"
+        );
+    }
+
+    /// A yearly cycle's alert says its years after the reminder — "(1 year)" for one.
+    #[test]
+    fn a_yearly_alert_says_its_years() {
+        let now = at("2026-11-10T09:00");
+        let shelf = |rows: &str| {
+            let text = format!("recurring = true\nnotice = \"1 week\"\npending = '''\n{rows}'''\n");
+            let topic = Topic::parse(Path::new("/r/birthday.toml"), text);
+            let record = Record::of(&topic.path);
+            [(topic, record)]
+        };
+        let said = |rows: &str| alerts(&due::due(&shelf(rows), &now), &now, Colors::Plain);
+        assert_eq!(said("1990-11-15  Dana\n"), "Upcoming in 5 days: birthday:Dana (36 years)\n");
+        assert_eq!(
+            said("2025-11-12  Baby  # cake\n"),
+            "Upcoming in 2 days: birthday:Baby (1 year) — cake\n"
+        );
+        assert_eq!(
+            said("11-15  Noa\n"),
+            "Upcoming in 5 days: birthday:Noa\n",
+            "no year written: none counted"
         );
     }
 

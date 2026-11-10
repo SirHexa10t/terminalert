@@ -137,6 +137,30 @@ impl Timing {
         }
         found
     }
+
+    /// The full date a recurring file wrote it with (`1990-04-12`): the date its dates count their
+    /// years from.
+    pub fn since(&self) -> Option<Date> {
+        match self {
+            Timing::Repeating(repeat) => repeat.since(),
+            Timing::None | Timing::Once { .. } => None,
+        }
+    }
+
+    /// Whether it names one day a year: `04-12`, `1990-04-12`, or cron naming one day of one
+    /// month (`* * 12 4 *`, `0 9 12 4 *`) — and no weekday, which comes every week.
+    pub fn is_once_a_year(&self) -> bool {
+        match self {
+            Timing::Repeating(repeat) => {
+                let [_, _, day, _, weekday] = repeat.fields();
+                weekday == "*"
+                    && day != "L"
+                    && repeat.days().len() == 1
+                    && repeat.months().len() == 1
+            }
+            Timing::None | Timing::Once { .. } => false,
+        }
+    }
 }
 
 /// What can't be read as a timing, said with what can.
@@ -538,6 +562,26 @@ mod tests {
         let (latest, next) = lesson.around(&at("2026-11-09T18:00"));
         assert_eq!(latest.unwrap().key(), "2026-11-09T18:00");
         assert_eq!(next.unwrap().key(), "2026-11-12T18:00");
+    }
+
+    /// One day a year: a date, without its year or with it, or cron naming one day of one month —
+    /// never a weekday, nor more days than one.
+    #[test]
+    fn once_a_year_is_one_day_of_one_month() {
+        for yearly in ["04-12", "1990-04-12", "04-12 09:00", "02-29", "* * 12 4 *", "0 9 12 4 *"] {
+            assert!(recurring(yearly).is_once_a_year(), "{yearly}");
+        }
+        for not in
+            ["daily", "mon", "last", "* * 1 * *", "* * 12 4,5 *", "* * 1,2 4 *", "* * 12 4 mon"]
+        {
+            assert!(!recurring(not).is_once_a_year(), "{not}");
+        }
+        assert!(
+            !Timing::parse("2026-11-20", false).unwrap().is_once_a_year(),
+            "once is not yearly"
+        );
+        assert_eq!(recurring("1990-04-12").since(), Some(jiff::civil::date(1990, 4, 12)));
+        assert_eq!(recurring("04-12").since(), None);
     }
 
     /// A round recorded for one date handles it and every one before it.

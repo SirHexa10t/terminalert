@@ -10,6 +10,7 @@ use std::fmt;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 
+use jiff::civil::Date;
 use toml::Spanned;
 
 use crate::error::{Error, Result};
@@ -187,6 +188,19 @@ impl Topic {
             .map_err(|source| Error::Write { path: self.path.clone(), source })
     }
 
+    /// Whether it is a yearly cycle — birthdays, memorials, holidays, anniversaries — whose alerts
+    /// count the years since each date written with its year: its reminders recur and lapse
+    /// (`recurring`, not `sticky`), each on one day a year, and none is written with a date still
+    /// ahead of `today`.
+    pub fn is_yearly_cycle(&self, today: Date) -> bool {
+        let looks_back =
+            |reminder: &Reminder| reminder.timing.since().is_none_or(|since| since <= today);
+        self.settings.recurring
+            && !self.settings.sticky
+            && self.reminders.iter().all(|reminder| reminder.timing.is_once_a_year())
+            && self.reminders.iter().all(looks_back)
+    }
+
     /// Whether a reminder named `what` is in the file.
     pub fn reminder(&self, what: &str) -> Option<&Reminder> {
         self.reminders.iter().find(|reminder| reminder.what == what)
@@ -308,6 +322,43 @@ mod tests {
             ]
         );
         assert_eq!(topic.reminders.len(), 1, "Grandpa, once");
+    }
+
+    /// A yearly cycle recurs and lapses, each reminder on one day a year, nothing written ahead of
+    /// today — a file it holds of anything else, or anything still to come, is not one.
+    #[test]
+    fn a_yearly_cycle_recurs_lapses_and_looks_back() {
+        let today = jiff::civil::date(2026, 11, 10);
+        let file =
+            |settings: &str, rows: &str| parsed(&format!("{settings}pending = '''\n{rows}'''\n"));
+        let birthdays = "1990-11-15  Dana\n1955-11-10  Grandpa\n11-15  Noa\n";
+        let with = |row: &str| format!("{birthdays}{row}\n");
+        assert!(file("recurring = true\n", birthdays).is_yearly_cycle(today));
+        assert!(
+            file("recurring = true\n", &with("2026-11-10  Born today")).is_yearly_cycle(today),
+            "today isn't ahead"
+        );
+        assert!(
+            file("recurring = true\n", &with("* * 1 5 *  May Day")).is_yearly_cycle(today),
+            "cron, one day a year"
+        );
+        assert!(
+            !file("recurring = true\nsticky = true\n", birthdays).is_yearly_cycle(today),
+            "sticky: things to do"
+        );
+        assert!(
+            !file("recurring = true\n", &with("mon  Trash")).is_yearly_cycle(today),
+            "a weekly one"
+        );
+        assert!(
+            !file("recurring = true\n", &with("2027-06-01  Wedding")).is_yearly_cycle(today),
+            "a year ahead"
+        );
+        assert!(
+            !file("recurring = true\n", &with("2026-12-25  Party")).is_yearly_cycle(today),
+            "a date ahead"
+        );
+        assert!(!file("", "2026-11-20  Dentist\n").is_yearly_cycle(today), "a to-do list");
     }
 
     /// A file that isn't TOML, or writes a key that isn't one, says so — and reads as no reminders.
